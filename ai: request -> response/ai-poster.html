@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>От запроса пользователя до ответа модели</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #fafafa;
+    color: #1a1a1a;
+    line-height: 1.6;
+    padding: 60px 40px;
+  }
+
+  .poster {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .poster-title {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+
+  .poster-title h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #111;
+    margin-bottom: 8px;
+  }
+
+  .poster-title p {
+    font-size: 15px;
+    color: #888;
+    font-weight: 400;
+  }
+
+  /* Step card */
+  .step {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+    align-items: start;
+    margin-bottom: 0;
+    padding: 40px 44px;
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #e8e8e8;
+    position: relative;
+  }
+
+  .step-full {
+    grid-template-columns: 1fr;
+  }
+
+  /* Connector arrow between steps */
+  .connector {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .connector svg {
+    display: block;
+  }
+
+  /* Step number & header */
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #111;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .step-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .step-content {
+    font-size: 14px;
+    color: #444;
+  }
+
+  .step-content p {
+    margin-bottom: 12px;
+  }
+
+  .step-content .example {
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: #333;
+    margin: 14px 0;
+    line-height: 1.8;
+    border: 1px solid #eee;
+  }
+
+  .step-content .note {
+    font-size: 13px;
+    color: #888;
+    margin-top: 8px;
+  }
+
+  /* Visual panel */
+  .visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    border-radius: 16px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===== STEP 1: Input ===== */
+  .input-bubble {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 20px 28px;
+    font-size: 15px;
+    color: #333;
+    position: relative;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+
+  .input-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 28px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-right: 2px solid #e0e0e0;
+    border-bottom: 2px solid #e0e0e0;
+    transform: rotate(45deg);
+  }
+
+  .input-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 18px;
+    background: #111;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .user-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e8e8e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: -30px;
+    left: 10px;
+  }
+
+  /* ===== STEP 2: Tokenization ===== */
+  .tokens-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .token-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .token {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'SF Mono', monospace;
+    transition: transform 0.2s;
+  }
+
+  .token:hover { transform: translateY(-2px); }
+
+  .token-0 { background: #fee2e2; color: #991b1b; }
+  .token-1 { background: #fef3c7; color: #92400e; }
+  .token-2 { background: #d1fae5; color: #065f46; }
+  .token-3 { background: #dbeafe; color: #1e40af; }
+  .token-4 { background: #ede9fe; color: #5b21b6; }
+  .token-5 { background: #fce7f3; color: #9d174d; }
+
+  .token-arrow {
+    color: #ccc;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+  }
+
+  .token-id-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .token-id {
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #f3f3f3;
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+    color: #666;
+    border: 1px solid #e5e5e5;
+  }
+
+  /* ===== STEP 3: Embedding 3D ===== */
+  .embedding-3d {
+    width: 100%;
+    height: 280px;
+    position: relative;
+    perspective: 600px;
+  }
+
+  .axis-3d {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 260px;
+    height: 200px;
+    transform-style: preserve-3d;
+    transform: translateX(-50%) rotateX(20deg) rotateY(-25deg);
+  }
+
+  .axis-line {
+    position: absolute;
+    background: #ddd;
+    transform-origin: 0 0;
+  }
+
+  .axis-x { width: 200px; height: 1.5px; bottom: 0; left: 30px; }
+  .axis-y { width: 1.5px; height: 160px; bottom: 0; left: 30px; }
+  .axis-z {
+    width: 120px; height: 1.5px;
+    bottom: 0; left: 30px;
+    transform: rotate(-45deg);
+  }
+
+  .axis-label {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 500;
+    color: #aaa;
+  }
+
+  .label-x { bottom: -18px; right: -10px; }
+  .label-y { top: -10px; left: -5px; }
+  .label-z { bottom: -18px; left: -30px; }
+
+  .point-3d {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.3s;
+    cursor: pointer;
+  }
+
+  .point-3d:hover {
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+
+  .point-3d .point-label {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: #555;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .point-3d:hover .point-label {
+    opacity: 1;
+  }
+
+  .cluster-circle {
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px dashed;
+    opacity: 0.3;
+  }
+
+  .embedding-legend {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 10px;
+    color: #aaa;
+  }
+
+  /* ===== STEP 4: Transformer ===== */
+  .transformer-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+
+  .attention-grid {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  .att-token {
+    width: 54px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: #333;
+    position: relative;
+    z-index: 2;
+  }
+
+  .attention-lines {
+    width: 100%;
+    height: 60px;
+    margin: -4px 0;
+  }
+
+  .sub-label {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    margin: 6px 0 12px;
+    font-weight: 400;
+  }
+
+  .ffn-block {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .repeat-badge {
+    margin-top: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    background: #111;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* ===== STEP 5: Logits ===== */
+  .logits-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .logit-bar {
+    display: grid;
+    grid-template-columns: 70px 1fr 40px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logit-label {
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    color: #333;
+  }
+
+  .logit-track {
+    height: 28px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .logit-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+  }
+
+  .logit-value {
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+    color: #888;
+  }
+
+  /* ===== STEP 6: Sampling ===== */
+  .sampling-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .sampling-stage {
+    width: 100%;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sampling-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  .sampling-stage-label {
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+  }
+
+  .prob-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 80px;
+    padding: 0 10px;
+  }
+
+  .prob-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .prob-bar-fill {
+    width: 40px;
+    border-radius: 6px 6px 0 0;
+    transition: height 1s ease;
+  }
+
+  .prob-bar-label {
+    font-size: 10px;
+    color: #888;
+    font-weight: 500;
+  }
+
+  .prob-bar-pct {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .dice-result {
+    padding: 10px 24px;
+    background: #111;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* ===== STEP 7: Stop check ===== */
+  .stop-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .stop-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #eee;
+  }
+
+  .stop-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .stop-icon.red { background: #fee2e2; color: #dc2626; }
+  .stop-icon.green { background: #d1fae5; color: #059669; }
+
+  .stop-text {
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+  }
+
+  /* ===== STEP 8: Autoregressive ===== */
+  .autoregressive-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .iteration-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #eee;
+  }
+
+  .iter-num {
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    width: 14px;
+    flex-shrink: 0;
+  }
+
+  .iter-tokens {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .iter-token {
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .iter-token.existing { background: #f3f3f3; color: #888; }
+  .iter-token.new { background: #111; color: #fff; }
+
+  .iter-arrow {
+    color: #ccc;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .cycle-arrow {
+    text-align: center;
+    font-size: 11px;
+    color: #aaa;
+    padding: 4px 0;
+  }
+
+  /* ===== STEP 9: Detokenization ===== */
+  .detokenize-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .token-merge {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .merge-token {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'SF Mono', monospace;
+    font-weight: 500;
+    border: 1.5px dashed #ccc;
+    color: #666;
+    position: relative;
+  }
+
+  .merge-arrow {
+    font-size: 20px;
+    color: #ccc;
+  }
+
+  .final-text {
+    padding: 16px 24px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e0e0e0;
+    font-size: 15px;
+    color: #333;
+    font-weight: 400;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .stream-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #111;
+    margin-left: 4px;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .step {
+      grid-template-columns: 1fr;
+    }
+    body {
+      padding: 30px 16px;
+    }
+  }
+
+  /* Canvas for 3D embedding */
+  #embedding-canvas {
+    width: 100%;
+    height: 280px;
+    border-radius: 12px;
+  }
+
+  /* SVG styles */
+  .att-line {
+    stroke-linecap: round;
+    transition: stroke-width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+  <!-- Title -->
+  <div class="poster-title">
+    <h1>Полная схема: от запроса пользователя до ответа модели</h1>
+    <p>Как языковая модель генерирует текст — шаг за шагом</p>
+  </div>
+
+  <!-- ===== STEP 1: INPUT ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Ввод пользователя</h2>
+      </div>
+      <div class="step-content">
+        <div class="example">"Расскажи анекдот про кота"</div>
+      </div>
+    </div>
+    <div class="visual">
+      <div style="position: relative;">
+        <div class="input-bubble">
+          Расскажи анекдот про кота<span class="input-cursor"></span>
+        </div>
+        <div class="user-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 2: TOKENIZATION ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Токенизация</h2>
+      </div>
+      <div class="step-content">
+        <p>Текст разбивается на токены по словарю модели (BPE алгоритм)</p>
+        <div class="example">
+          "Расскажи анекдот про кота"<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          ["Рас", "скажи", " анек", "дот", " про", " кота"]
+        </div>
+        <p>Каждый токен получает числовой ID из словаря:</p>
+        <div class="example">[4821, 9903, 7712, 3304, 1082, 8845]</div>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 14px;">
+      <div class="token-row">
+        <span class="token token-0">Рас</span>
+        <span class="token token-1">скажи</span>
+        <span class="token token-2">анек</span>
+        <span class="token token-3">дот</span>
+        <span class="token token-4">про</span>
+        <span class="token token-5">кота</span>
+      </div>
+      <div class="token-arrow">↓</div>
+      <div class="token-id-row">
+        <span class="token-id">4821</span>
+        <span class="token-id">9903</span>
+        <span class="token-id">7712</span>
+        <span class="token-id">3304</span>
+        <span class="token-id">1082</span>
+        <span class="token-id">8845</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 3: EMBEDDING ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Эмбеддинг (Embedding)</h2>
+      </div>
+      <div class="step-content">
+        <p>Каждый token ID превращается в вектор — массив чисел, который кодирует СМЫСЛ токена в многомерном пространстве</p>
+        <div class="example">
+          ID 4821 → [0.12, -0.45, 0.78, 0.03, ..., -0.21]&nbsp; (2048+ чисел)<br>
+          ID 9903 → [0.56, 0.11, -0.33, 0.89, ..., 0.44]<br>
+          ...
+        </div>
+        <p>+ Positional Encoding — добавляется информация о ПОЗИЦИИ каждого токена в предложении (модель должна знать порядок)</p>
+      </div>
+    </div>
+    <div class="visual" style="padding: 0; background: #fafafa;">
+      <canvas id="embedding-canvas"></canvas>
+      <div class="embedding-legend">3D пространство эмбеддингов</div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 4: TRANSFORMER ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Трансформер (Transformer)</h2>
+      </div>
+      <div class="step-content">
+        <p>Ядро модели. Набор слоёв (у Gemini — десятки слоёв), каждый слой содержит:</p>
+        <p><strong>Self-Attention (механизм внимания)</strong></p>
+        <p>Каждый токен "смотрит" на все остальные токены и определяет, какие из них важны для текущего контекста</p>
+        <div class="example">
+          "кота" обращает внимание на "анекдот" и "расскажи"<br>
+          → понимает: нужен юмор про кота
+        </div>
+        <p><strong>Feed-Forward Network (нейросеть прямого прохода)</strong></p>
+        <p>Обрабатывает результат attention, извлекает более сложные закономерности и "знания"</p>
+        <p class="note">Это повторяется N раз (слой за слоем), каждый раз углубляя понимание контекста</p>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 8px;">
+      <div class="sub-label">Self-Attention: связи между токенами</div>
+      <div class="attention-grid" id="attention-grid">
+        <div class="att-token">Рас</div>
+        <div class="att-token">скажи</div>
+        <div class="att-token">анек</div>
+        <div class="att-token">дот</div>
+        <div class="att-token">про</div>
+        <div class="att-token" style="border-color: #111; background: #f5f5f5;">кота</div>
+      </div>
+      <svg class="attention-lines" viewBox="0 0 340 60" id="attention-svg">
+        <!-- Lines drawn by JS -->
+      </svg>
+      <div class="sub-label" style="margin-top: 0;">↓</div>
+      <div class="ffn-block">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="2.5" fill="#bbb"/><circle cx="12" cy="4" r="2.5" fill="#bbb"/><circle cx="8" cy="12" r="2.5" fill="#bbb"/><line x1="4" y1="6" x2="8" y2="10" stroke="#ccc" stroke-width="1"/><line x1="12" y1="6" x2="8" y2="10" stroke="#ccc" stroke-width="1"/></svg>
+        Feed-Forward Network
+      </div>
+      <div class="repeat-badge">× N слоёв</div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 5: LOGITS ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <h2>Логиты (Logits)</h2>
+      </div>
+      <div class="step-content">
+        <p>На выходе трансформера — один вектор, который проецируется на ВЕСЬ словарь. Получаем сырую оценку для каждого токена:</p>
+        <div class="example">
+          "Идёт"&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp; 5.8<br>
+          "Жил"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp; 5.2<br>
+          "Кот"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp; 4.1<br>
+          "Однажды" →&nbsp; 3.9<br>
+          "The"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ -2.1<br>
+          "xyz"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ -9.4<br>
+          ... (30 000+ оценок — по одной на каждый токен в словаре)
+        </div>
+        <p class="note">Это ещё НЕ вероятности, просто числа</p>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 8px;">
+      <div class="logits-visual">
+        <div class="logit-bar">
+          <span class="logit-label">Идёт</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 82%; background: #111;"></div></div>
+          <span class="logit-value">5.8</span>
+        </div>
+        <div class="logit-bar">
+          <span class="logit-label">Жил</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 74%; background: #444;"></div></div>
+          <span class="logit-value">5.2</span>
+        </div>
+        <div class="logit-bar">
+          <span class="logit-label">Кот</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 58%; background: #777;"></div></div>
+          <span class="logit-value">4.1</span>
+        </div>
+        <div class="logit-bar">
+          <span class="logit-label">Однажды</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 54%; background: #999;"></div></div>
+          <span class="logit-value">3.9</span>
+        </div>
+        <div class="logit-bar">
+          <span class="logit-label" style="color: #bbb;">The</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 12%; background: #ddd;"></div></div>
+          <span class="logit-value" style="color: #ccc;">-2.1</span>
+        </div>
+        <div class="logit-bar">
+          <span class="logit-label" style="color: #ddd;">xyz</span>
+          <div class="logit-track"><div class="logit-fill" style="width: 3%; background: #eee;"></div></div>
+          <span class="logit-value" style="color: #ddd;">-9.4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 6: SAMPLING ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">6</div>
+        <h2>Сэмплирование (выбор следующего токена)</h2>
+      </div>
+      <div class="step-content">
+        <p><strong>6.1 Temperature</strong></p>
+        <p>Каждый логит делится на temperature: logit / temperature</p>
+        <div class="example">
+          Низкая (0.1) → разница усиливается → предсказуемый ответ<br>
+          Высокая (2.0) → разница сглаживается → креативный ответ
+        </div>
+        <p><strong>6.2 Top-K</strong></p>
+        <p>Оставляем только K самых вероятных токенов<br>(topK=64 → берём 64, остальные 29 936 отбрасываем)</p>
+        <p><strong>6.3 Top-P (Nucleus Sampling)</strong></p>
+        <p>Из оставшихся берём минимальный набор, чья суммарная вероятность ≥ 95% (topP=0.95)</p>
+        <p><strong>6.4 Softmax → Вероятности</strong></p>
+        <p>Преобразуем отфильтрованные логиты в вероятности</p>
+        <p><strong>6.5 Случайный выбор (sampling)</strong></p>
+        <p>Бросаем "кубик" с учётом вероятностей</p>
+        <div class="example">Результат: "Идёт"</div>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 10px;">
+      <div class="sampling-stage">
+        <div class="sampling-icon" style="background: #f3f3f3;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M4 6l4-4 4 4" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="sampling-stage-label">Temperature: logit / t</div>
+      </div>
+      <div class="sampling-stage">
+        <div class="sampling-icon" style="background: #f3f3f3;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#555" stroke-width="1.5"/><line x1="2" y1="8" x2="14" y2="8" stroke="#555" stroke-width="1" stroke-dasharray="2 2"/></svg>
+        </div>
+        <div class="sampling-stage-label">Top-K: оставить 64 лучших</div>
+      </div>
+      <div class="sampling-stage">
+        <div class="sampling-icon" style="background: #f3f3f3;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555" stroke-width="1.5"/><path d="M8 2a6 6 0 0 1 5.2 3" stroke="#111" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="sampling-stage-label">Top-P: суммарная P ≥ 0.95</div>
+      </div>
+      <div style="display: flex; justify-content: center; align-items: flex-end; gap: 12px; height: 100px; padding: 0 10px;">
+        <div class="prob-bar-item">
+          <div class="prob-bar-pct">42%</div>
+          <div class="prob-bar-fill" style="height: 67px; background: #111;"></div>
+          <div class="prob-bar-label">Идёт</div>
+        </div>
+        <div class="prob-bar-item">
+          <div class="prob-bar-pct">31%</div>
+          <div class="prob-bar-fill" style="height: 50px; background: #555;"></div>
+          <div class="prob-bar-label">Жил</div>
+        </div>
+        <div class="prob-bar-item">
+          <div class="prob-bar-pct">18%</div>
+          <div class="prob-bar-fill" style="height: 29px; background: #999;"></div>
+          <div class="prob-bar-label">Кот</div>
+        </div>
+        <div class="prob-bar-item">
+          <div class="prob-bar-pct">9%</div>
+          <div class="prob-bar-fill" style="height: 14px; background: #ccc;"></div>
+          <div class="prob-bar-label">Однажды</div>
+        </div>
+      </div>
+      <div class="dice-result">Результат: "Идёт"</div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 7: STOP CHECK ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">7</div>
+        <h2>Проверка остановки</h2>
+      </div>
+      <div class="step-content">
+        <div class="example">
+          Сгенерированный токен = EOS (конец)?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ СТОП<br>
+          Достигнут maxOutputTokens?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ СТОП<br>
+          Встретился stop sequence?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ СТОП<br>
+          Ничего из этого?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ ПРОДОЛЖАЕМ ↓
+        </div>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 8px;">
+      <div class="stop-visual">
+        <div class="stop-check">
+          <div class="stop-icon red">✕</div>
+          <div class="stop-text">EOS токен? — Нет</div>
+        </div>
+        <div class="stop-check">
+          <div class="stop-icon red">✕</div>
+          <div class="stop-text">maxOutputTokens? — Нет</div>
+        </div>
+        <div class="stop-check">
+          <div class="stop-icon red">✕</div>
+          <div class="stop-text">Stop sequence? — Нет</div>
+        </div>
+        <div class="stop-check" style="border-color: #d1fae5; background: #f0fdf4;">
+          <div class="stop-icon green">→</div>
+          <div class="stop-text" style="color: #059669; font-weight: 600;">Продолжаем генерацию</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 8: AUTOREGRESSIVE ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">8</div>
+        <h2>Авторегрессионный цикл</h2>
+      </div>
+      <div class="step-content">
+        <p>Выбранный токен добавляется к входной последовательности:</p>
+        <div class="example">
+          Итерация 1: "Расскажи анекдот про кота"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ "Идёт"<br>
+          Итерация 2: "Расскажи анекдот про кота Идёт"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ "кот"<br>
+          Итерация 3: "Расскажи анекдот про кота Идёт кот" → "по"<br>
+          ...
+        </div>
+        <p>Каждая итерация проходит ЗАНОВО шаги 3 → 4 → 5 → 6 → 7<br>(с учётом KV-cache для ускорения)</p>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 6px;">
+      <div class="autoregressive-visual">
+        <div class="iteration-row">
+          <span class="iter-num">1</span>
+          <div class="iter-tokens">
+            <span class="iter-token existing">Расскажи анекдот про кота</span>
+          </div>
+          <span class="iter-arrow">→</span>
+          <span class="iter-token new">Идёт</span>
+        </div>
+        <div class="iteration-row">
+          <span class="iter-num">2</span>
+          <div class="iter-tokens">
+            <span class="iter-token existing">Расскажи анекдот про кота</span>
+            <span class="iter-token existing">Идёт</span>
+          </div>
+          <span class="iter-arrow">→</span>
+          <span class="iter-token new">кот</span>
+        </div>
+        <div class="iteration-row">
+          <span class="iter-num">3</span>
+          <div class="iter-tokens">
+            <span class="iter-token existing">Расскажи анекдот про кота</span>
+            <span class="iter-token existing">Идёт</span>
+            <span class="iter-token existing">кот</span>
+          </div>
+          <span class="iter-arrow">→</span>
+          <span class="iter-token new">по</span>
+        </div>
+        <div class="cycle-arrow">↻ шаги 3 → 4 → 5 → 6 → 7 (KV-cache)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connector">
+    <svg width="2" height="36" viewBox="0 0 2 36"><line x1="1" y1="0" x2="1" y2="28" stroke="#ccc" stroke-width="1.5"/><polygon points="0,28 2,28 1,35" fill="#ccc"/></svg>
+  </div>
+
+  <!-- ===== STEP 9: DETOKENIZATION ===== -->
+  <div class="step">
+    <div>
+      <div class="step-header">
+        <div class="step-number">9</div>
+        <h2>Детокенизация</h2>
+      </div>
+      <div class="step-content">
+        <p>Набранные токены склеиваются обратно в текст:</p>
+        <div class="example">
+          ["Идёт", " кот", " по", " крыше", "..."]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+          "Идёт кот по крыше..."
+        </div>
+        <p>Этот текст отдаётся пользователю<br>(при streaming — токен за токеном по мере генерации)</p>
+      </div>
+    </div>
+    <div class="visual" style="flex-direction: column; gap: 14px;">
+      <div class="detokenize-visual">
+        <div class="token-merge">
+          <span class="merge-token">Идёт</span>
+          <span class="merge-token">кот</span>
+          <span class="merge-token">по</span>
+          <span class="merge-token">крыше</span>
+          <span class="merge-token">...</span>
+        </div>
+        <div class="merge-arrow">↓</div>
+        <div class="final-text">
+          Идёт кот по крыше...<span class="stream-dot"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== 3D Embedding Visualization =====
+(function() {
+  const canvas = document.getElementById('embedding-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 280 * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = '280px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); draw(angle); });
+
+  // Points in 3D space representing token embeddings
+  const points = [
+    { x: -1.2, y: 0.8, z: 0.5, label: 'Рас', color: '#ef4444' },
+    { x: -0.6, y: 1.0, z: 0.3, label: 'скажи', color: '#f59e0b' },
+    { x: 1.0, y: -0.5, z: -0.8, label: 'анек', color: '#10b981' },
+    { x: 1.3, y: -0.3, z: -0.6, label: 'дот', color: '#3b82f6' },
+    { x: -0.2, y: -1.0, z: 1.0, label: 'про', color: '#8b5cf6' },
+    { x: 0.8, y: -1.2, z: 0.2, label: 'кота', color: '#ec4899' },
+    // Cluster: nearby semantic words
+    { x: 0.9, y: -0.7, z: -0.5, color: '#10b98166', r: 4, noLabel: true },
+    { x: 1.1, y: -0.1, z: -0.9, color: '#3b82f666', r: 4, noLabel: true },
+    { x: -0.8, y: 0.6, z: 0.7, color: '#ef444466', r: 4, noLabel: true },
+    { x: -1.0, y: 1.2, z: 0.1, color: '#f59e0b66', r: 4, noLabel: true },
+  ];
+
+  // Clusters (dashed circles)
+  const clusters = [
+    { x: -0.9, y: 0.9, z: 0.4, r: 0.8, color: '#f59e0b', label: 'действие' },
+    { x: 1.05, y: -0.5, z: -0.7, r: 0.7, color: '#3b82f6', label: 'объект' },
+  ];
+
+  let angle = 0;
+  let mouseX = 0;
+  let isHovering = false;
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) / rect.width;
+    isHovering = true;
+  });
+  canvas.addEventListener('mouseleave', () => { isHovering = false; });
+
+  function project(x, y, z, a) {
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const rx = x * cos - z * sin;
+    const rz = x * sin + z * cos;
+    const w = canvas.width / dpr;
+    const h = 280;
+    const scale = 70;
+    const perspective = 4;
+    const f = perspective / (perspective + rz);
+    return {
+      sx: w / 2 + rx * scale * f,
+      sy: h / 2 - y * scale * f + 10,
+      depth: rz,
+      f: f
+    };
+  }
+
+  function draw(a) {
+    const w = canvas.width / dpr;
+    const h = 280;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw axes
+    const origin = project(0, 0, 0, a);
+    const axisLen = 1.8;
+    const axes = [
+      { to: project(axisLen, 0, 0, a), label: 'dim 1', color: '#ddd' },
+      { to: project(0, axisLen, 0, a), label: 'dim 2', color: '#ddd' },
+      { to: project(0, 0, axisLen, a), label: 'dim 3', color: '#ddd' },
+    ];
+
+    axes.forEach(ax => {
+      ctx.beginPath();
+      ctx.moveTo(origin.sx, origin.sy);
+      ctx.lineTo(ax.to.sx, ax.to.sy);
+      ctx.strokeStyle = ax.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.font = '10px Inter';
+      ctx.fillStyle = '#bbb';
+      ctx.fillText(ax.label, ax.to.sx + 4, ax.to.sy - 4);
+    });
+
+    // Draw cluster ellipses
+    clusters.forEach(c => {
+      const cp = project(c.x, c.y, c.z, a);
+      const rp = c.r * 70 * cp.f;
+      ctx.beginPath();
+      ctx.ellipse(cp.sx, cp.sy, rp, rp * 0.6, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = c.color + '40';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = '10px Inter';
+      ctx.fillStyle = c.color + '80';
+      ctx.fillText(c.label, cp.sx - ctx.measureText(c.label).width / 2, cp.sy + rp * 0.6 + 14);
+    });
+
+    // Sort by depth for correct overlap
+    const projected = points.map((p, i) => ({
+      ...p,
+      ...project(p.x, p.y, p.z, a),
+      idx: i
+    }));
+    projected.sort((a, b) => a.depth - b.depth);
+
+    // Draw points
+    projected.forEach(p => {
+      const r = (p.r || 7) * p.f;
+      const alpha = Math.max(0.4, Math.min(1, (p.depth + 2) / 3));
+
+      // Glow
+      if (!p.noLabel) {
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, r + 6, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + '15';
+        ctx.fill();
+      }
+
+      // Point
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Shadow
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+      ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Label
+      if (!p.noLabel) {
+        ctx.font = '500 11px Inter';
+        ctx.fillStyle = '#333';
+        ctx.globalAlpha = alpha;
+        const tw = ctx.measureText(p.label).width;
+        ctx.fillText(p.label, p.sx - tw / 2, p.sy - r - 6);
+        ctx.globalAlpha = 1;
+      }
+    });
+
+    // Draw connecting lines between semantic pairs
+    const pairs = [[0, 1], [2, 3], [4, 5]];
+    pairs.forEach(([i, j]) => {
+      const a_ = projected.find(p => p.idx === i);
+      const b_ = projected.find(p => p.idx === j);
+      ctx.beginPath();
+      ctx.moveTo(a_.sx, a_.sy);
+      ctx.lineTo(b_.sx, b_.sy);
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  }
+
+  function animate() {
+    if (isHovering) {
+      angle = (mouseX - 0.5) * Math.PI * 1.2;
+    } else {
+      angle += 0.003;
+    }
+    draw(angle);
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ===== Attention Lines =====
+(function() {
+  const svg = document.getElementById('attention-svg');
+  // Token positions (6 tokens, centered in 340px)
+  const positions = [28, 90, 152, 214, 248, 310];
+  // Attention weights from "кота" (index 5) to others
+  const weights = [
+    { from: 5, to: 0, w: 0.25, label: '' },  // кота -> Рас (расскажи)
+    { from: 5, to: 1, w: 0.35, label: '' },  // кота -> скажи
+    { from: 5, to: 2, w: 0.30, label: '' },  // кота -> анек
+    { from: 5, to: 3, w: 0.20, label: '' },  // кота -> дот
+    { from: 5, to: 4, w: 0.10, label: '' },  // кота -> про
+  ];
+
+  weights.forEach(w => {
+    const x1 = positions[w.from];
+    const x2 = positions[w.to];
+    const opacity = Math.max(0.15, w.w);
+    const strokeWidth = 0.5 + w.w * 4;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const midY = 30 + (1 - w.w) * 15;
+    const d = `M ${x1} 5 Q ${(x1 + x2) / 2} ${midY} ${x2} 55`;
+    line.setAttribute('d', d);
+    line.setAttribute('stroke', '#111');
+    line.setAttribute('stroke-width', strokeWidth);
+    line.setAttribute('fill', 'none');
+    line.setAttribute('opacity', opacity);
+    line.classList.add('att-line');
+    svg.appendChild(line);
+  });
+})();
+</script>
+
+</body>
+</html>
