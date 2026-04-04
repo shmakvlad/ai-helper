@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный Трансформер</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --dark: #1e293b;
+            --light: #f1f5f9;
+            --bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        /* Основной контейнер сцены */
+        .scene-container {
+            background: var(--bg);
+            width: 100%;
+            max-width: 1000px;
+            height: 500px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        /* Блоки этапов */
+        .stage-block {
+            width: 18%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 15px;
+            border: 4px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .stage-block.active .icon-circle {
+            border-color: var(--primary);
+            background: #dbeafe;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .stage-label {
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .stage-sublabel {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-align: center;
+        }
+
+        /* Визуальные элементы внутри блоков */
+        .tokens-display {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .token-box {
+            background: var(--dark);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .vector-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+            opacity: 0;
+        }
+
+        .vector-cell {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 1px;
+        }
+
+        /* Линии связи (Attention) */
+        .attention-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .line {
+            stroke: var(--accent);
+            stroke-width: 2;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawLine 1.5s forwards;
+            opacity: 0.6;
+        }
+
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Панель информации */
+        .info-panel {
+            margin-top: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 1000px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary);
+            min-height: 120px;
+        }
+
+        .analogy-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button.secondary {
+            background: white;
+            color: var(--dark);
+            border: 1px solid #cbd5e1;
+        }
+
+        button.secondary:hover {
+            background: #f8fafc;
+        }
+
+        /* Анимация частицы данных */
+        .data-particle {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: var(--accent);
+            border-radius: 50%;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            z-index: 10;
+            box-shadow: 0 0 10px var(--accent);
+            transition: left 1s cubic-bezier(0.45, 0, 0.55, 1), top 1s cubic-bezier(0.45, 0, 0.55, 1);
+        }
+
+        /* Специфичные стили для Encoder/Decoder слоев */
+        .layer-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+            opacity: 0;
+        }
+        .layer-item {
+            width: 60px;
+            height: 10px;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .layer-item.highlight {
+            background: var(--secondary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Архитектура Трансформера</h1>
+    <p class="subtitle">Визуализация пути запроса "Столица Франции?" через нейросеть. Нажмите "Запустить", чтобы увидеть процесс.</p>
+
+    <div class="scene-container" id="scene">
+        <!-- SVG слой для линий внимания -->
+        <svg class="attention-lines" id="svg-lines"></svg>
+        
+        <!-- Частица данных -->
+        <div class="data-particle" id="particle"></div>
+
+        <!-- Этап 1: Токенизация -->
+        <div class="stage-block" id="step-tokenization">
+            <div class="icon-circle">🧩</div>
+            <div class="stage-label">Токенизация</div>
+            <div class="stage-sublabel">Разбивка текста</div>
+            <div class="tokens-display" id="vis-tokens">
+                <div class="token-box">Сто</div>
+                <div class="token-box">ли</div>
+                <div class="token-box">ца</div>
+                <div class="token-box">?</div>
+            </div>
+        </div>
+
+        <!-- Этап 2: Эмбеддинги -->
+        <div class="stage-block" id="step-embedding">
+            <div class="icon-circle">🔢</div>
+            <div class="stage-label">Эмбеддинги</div>
+            <div class="stage-sublabel">QR-коды смыслов</div>
+            <div class="vector-grid" id="vis-vectors">
+                <!-- Генерируется JS -->
+            </div>
+        </div>
+
+        <!-- Этап 3: Encoder -->
+        <div class="stage-block" id="step-encoder">
+            <div class="icon-circle">👓</div>
+            <div class="stage-label">Encoder</div>
+            <div class="stage-sublabel">Понимание (Self-Attention)</div>
+            <div class="layer-stack" id="vis-encoder-layers">
+                <div class="layer-item"></div>
+                <div class="layer-item"></div>
+                <div class="layer-item"></div>
+            </div>
+        </div>
+
+        <!-- Этап 4: Decoder -->
+        <div class="stage-block" id="step-decoder">
+            <div class="icon-circle">✍️</div>
+            <div class="stage-label">Decoder</div>
+            <div class="stage-sublabel">Генерация (Маска)</div>
+            <div class="layer-stack" id="vis-decoder-layers">
+                <div class="layer-item"></div>
+                <div class="layer-item"></div>
+                <div class="layer-item"></div>
+            </div>
+        </div>
+
+        <!-- Этап 5: Выход -->
+        <div class="stage-block" id="step-output">
+            <div class="icon-circle">💬</div>
+            <div class="stage-label">Ответ</div>
+            <div class="stage-sublabel">Softmax выбор</div>
+            <div class="tokens-display" id="vis-output" style="color: var(--primary); font-weight: bold;">
+                Париж
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel" id="info-panel">
+        <div class="analogy-badge" id="analogy-title">Аналогия: Лазерный сканер</div>
+        <h3 id="info-title" style="margin-top: 0;">Готов к запуску</h3>
+        <p id="info-text">Нажмите кнопку ниже, чтобы увидеть, как текст превращается в ответ.</p>
+    </div>
+
+    <div class="controls">
+        <button onclick="startSimulation()">▶ Запустить симуляцию</button>
+        <button class="secondary" onclick="resetSimulation()">↺ Сбросить</button>
+    </div>
+
+    <script>
+        // Данные для каждого этапа
+        const stepsData = {
+            tokenization: {
+                title: "Токенизация: Разрезание смысла",
+                analogy: "Лазерный сканер",
+                text: "Модель не читает слова целиком. Она разбивает текст на кусочки — токены. Слово 'Столица' может быть разбито на 'Сто', 'ли', 'ца'. Это позволяет модели работать с новыми словами, собирая их из известных частей.",
+                action: () => {
+                    document.getElementById('vis-tokens').style.opacity = '1';
+                }
+            },
+            embedding: {
+                title: "Эмбеддинги: Превращение в векторы",
+                analogy: "Уникальные QR-коды",
+                text: "Каждому токену присваивается вектор (список чисел). Это не просто ID, а сложный код, содержащий смысл. Похожие слова имеют похожие векторы. Сюда же добавляется информация о позиции слова (позиционное кодирование).",
+                action: () => {
+                    const grid = document.getElementById('vis-vectors');
+                    grid.innerHTML = '';
+                    for(let i=0; i<12; i++) {
+                        let cell = document.createElement('div');
+                        cell.className = 'vector-cell';
+                        cell.style.opacity = Math.random();
+                        grid.appendChild(cell);
+                    }
+                    grid.style.opacity = '1';
+                }
+            },
+            encoder: {
+                title: "Encoder: Механизм Внимания (Self-Attention)",
+                analogy: "Комната переводчиков",
+                text: "Ключевой момент! Каждое слово 'смотрит' на все остальные. Когда модель видит 'Столица', она через механизм внимания связывает его с 'Франции', чтобы понять контекст. Все слои работают параллельно.",
+                action: () => {
+                    document.getElementById('vis-encoder-layers').style.opacity = '1';
+                    document.querySelectorAll('#vis-encoder-layers .layer-item').forEach(el => el.classList.add('highlight'));
+                    drawAttentionLines('step-tokenization', 'step-encoder');
+                }
+            },
+            decoder: {
+                title: "Decoder: Генерация с Маской",
+                analogy: "Редакторы с шорами",
+                text: "Декодировщик генерирует ответ по одному слову. У него есть 'маска': он видит только уже написанные слова и контекст из Encoder. Он не может подсматривать в будущее, чтобы ответ был логичным.",
+                action: () => {
+                    document.getElementById('vis-decoder-layers').style.opacity = '1';
+                    document.querySelectorAll('#vis-decoder-layers .layer-item').forEach(el => el.classList.add('highlight'));
+                    drawAttentionLines('step-encoder', 'step-decoder');
+                }
+            },
+            output: {
+                title: "Выход: Вероятностный выбор",
+                analogy: "Главный редактор (Softmax)",
+                text: "На выходе получается список всех возможных слов с вероятностями. Функция Softmax превращает числа в проценты. Модель выбирает самое вероятное слово ('Париж' с 85%), добавляет его в ответ и начинает цикл заново для следующего слова.",
+                action: () => {
+                    document.getElementById('vis-output').style.opacity = '1';
+                    drawAttentionLines('step-decoder', 'step-output');
+                }
+            }
+        };
+
+        let isRunning = false;
+
+        function updateInfo(stepKey) {
+            const data = stepsData[stepKey];
+            document.getElementById('analogy-title').innerText = `Аналогия: ${data.analogy}`;
+            document.getElementById('info-title').innerText = data.title;
+            document.getElementById('info-text').innerText = data.text;
+            
+            // Подсветка активного блока
+            document.querySelectorAll('.stage-block').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${stepKey}`).classList.add('active');
+            
+            if(data.action) data.action();
+        }
+
+        function moveParticle(toElementId) {
+            const particle = document.getElementById('particle');
+            const target = document.getElementById(toElementId);
+            const container = document.getElementById('scene');
+            
+            const targetRect = target.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Вычисляем позицию относительно контейнера
+            const left = targetRect.left - containerRect.left + (targetRect.width / 2) - 7.5; // 7.5 - половина ширины частицы
+            const top = targetRect.top - containerRect.top + (targetRect.height / 2) - 7.5;
+
+            particle.style.left = `${left}px`;
+            particle.style.top = `${top}px`;
+        }
+
+        function drawAttentionLines(fromId, toId) {
+            const svg = document.getElementById('svg-lines');
+            const fromEl = document.getElementById(fromId);
+            const toEl = document.getElementById(toId);
+            const container = document.getElementById('scene');
+            
+            const fromRect = fromEl.getBoundingClientRect();
+            const toRect = toEl.getBoundingClientRect();
+            const contRect = container.getBoundingClientRect();
+
+            const x1 = fromRect.right - contRect.left;
+            const y1 = fromRect.top - contRect.top + fromRect.height/2;
+            const x2 = toRect.left - contRect.left;
+            const y2 = toRect.top - contRect.top + toRect.height/2;
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1);
+            line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2);
+            line.setAttribute("y2", y2);
+            line.setAttribute("class", "line");
+            
+            svg.appendChild(line);
+        }
+
+        async function startSimulation() {
+            if(isRunning) return;
+            isRunning = true;
+            resetSimulation(false);
+
+            const steps = ['tokenization', 'embedding', 'encoder', 'decoder', 'output'];
+            
+            for (let step of steps) {
+                updateInfo(step);
+                moveParticle(`step-${step}`);
+                await new Promise(r => setTimeout(r, 1500)); // Пауза между шагами
+            }
+            
+            isRunning = false;
+        }
+
+        function resetSimulation(clearText = true) {
+            document.getElementById('svg-lines').innerHTML = '';
+            document.querySelectorAll('.stage-block').forEach(el => el.classList.remove('active'));
+            document.getElementById('vis-tokens').style.opacity = '0';
+            document.getElementById('vis-vectors').style.opacity = '0';
+            document.getElementById('vis-encoder-layers').style.opacity = '0';
+            document.getElementById('vis-decoder-layers').style.opacity = '0';
+            document.getElementById('vis-output').style.opacity = '0';
+            
+            // Сброс частицы в начало
+            const particle = document.getElementById('particle');
+            particle.style.transition = 'none';
+            particle.style.left = '0px';
+            particle.style.top = '50%';
+            setTimeout(() => particle.style.transition = 'left 1s cubic-bezier(0.45, 0, 0.55, 1), top 1s cubic-bezier(0.45, 0, 0.55, 1)', 50);
+
+            if(clearText) {
+                document.getElementById('analogy-title').innerText = 'Аналогия: ...';
+                document.getElementById('info-title').innerText = 'Готов к запуску';
+                document.getElementById('info-text').innerText = 'Нажмите кнопку, чтобы начать.';
+            }
+        }
+    </script>
+</body>
+</html>

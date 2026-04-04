@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Как работает Трансформер: Интерактивный гайд</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #475569;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --accent: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: #1e293b;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+        }
+
+        /* Стили для схемы */
+        .pipeline-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+        }
+
+        .stage {
+            width: 18%;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s ease;
+        }
+
+        .stage:hover {
+            transform: translateY(-5px);
+        }
+
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .stage.active .icon-box {
+            border-color: var(--primary);
+            background: #dbeafe;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .stage-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stage-desc {
+            font-size: 0.8rem;
+            color: var(--secondary);
+        }
+
+        /* Анимация потока */
+        .data-packet {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            z-index: 1;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        /* Панель информации */
+        .info-panel {
+            margin-top: 30px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary);
+            min-height: 100px;
+        }
+
+        .analogy-tag {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* Линии связи (упрощенно) */
+        .connector {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #cbd5e1;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Архитектура Трансформера</h1>
+        <p>Нажмите "Запустить симуляцию", чтобы увидеть путь запроса от текста до ответа.</p>
+    </header>
+
+    <div class="pipeline-container">
+        <div class="connector"></div>
+        
+        <!-- Этап 1: Токенизация -->
+        <div class="stage" id="stage-token" onclick="showInfo('token')">
+            <div class="icon-box">🧩</div>
+            <div class="stage-title">Токенизация</div>
+            <div class="stage-desc">Разбивка на части</div>
+        </div>
+
+        <!-- Этап 2: Эмбеддинги -->
+        <div class="stage" id="stage-embed" onclick="showInfo('embed')">
+            <div class="icon-box">🔢</div>
+            <div class="stage-title">Эмбеддинги</div>
+            <div class="stage-desc">QR-коды смыслов</div>
+        </div>
+
+        <!-- Этап 3: Encoder -->
+        <div class="stage" id="stage-encoder" onclick="showInfo('encoder')">
+            <div class="icon-box">️</div>
+            <div class="stage-title">Encoder</div>
+            <div class="stage-desc">Переводчики (Понимание)</div>
+        </div>
+
+        <!-- Этап 4: Decoder -->
+        <div class="stage" id="stage-decoder" onclick="showInfo('decoder')">
+            <div class="icon-box">✍️</div>
+            <div class="stage-title">Decoder</div>
+            <div class="stage-desc">Редакторы (Генерация)</div>
+        </div>
+
+        <!-- Этап 5: Выход -->
+        <div class="stage" id="stage-output" onclick="showInfo('output')">
+            <div class="icon-box">💬</div>
+            <div class="stage-title">Ответ</div>
+            <div class="stage-desc">Softmax выбор</div>
+        </div>
+
+        <!-- Анимированный пакет данных -->
+        <div class="data-packet" id="packet"></div>
+    </div>
+
+    <div class="controls">
+        <button onclick="runSimulation()">▶ Запустить симуляцию</button>
+    </div>
+
+    <div class="info-panel" id="info-display">
+        <div class="analogy-tag">Аналогия: Библиотека-переводчик</div>
+        <h3>Добро пожаловать!</h3>
+        <p>Кликните на любой этап выше или запустите симуляцию, чтобы узнать, как ИИ обрабатывает ваш запрос.</p>
+    </div>
+</div>
+
+<script>
+    const infoData = {
+        token: {
+            title: "Токенизация: Разрезание текста",
+            analogy: "Лазерный сканер",
+            text: "Модель не видит буквы. Она разбивает текст на кусочки — токены. Например, 'Столица' может стать одним токеном, а 'Франции' — двумя ('Фран' и 'ции'). Это как нарезать овощи для салата: так их легче обрабатывать."
+        },
+        embed: {
+            title: "Эмбеддинги: Превращение в числа",
+            analogy: "Уникальные QR-коды",
+            text: "Каждому токену присваивается вектор (список чисел). Это не просто ID, а сложный код, содержащий смысл слова. Похожие слова (король/царь) будут иметь похожие векторы. Сюда же добавляется информация о позиции слова в предложении."
+        },
+        encoder: {
+            title: "Encoder: Понимание контекста",
+            analogy: "Комната переводчиков",
+            text: "Здесь работает механизм <b>Self-Attention</b>. Каждое слово 'смотрит' на все остальные, чтобы понять контекст. Слово 'оно' смотрит на 'кошка', чтобы понять род. Переводчики обсуждают текст параллельно, создавая глубокое понимание смысла."
+        },
+        decoder: {
+            title: "Decoder: Генерация ответа",
+            analogy: "Редакторы с маской",
+            text: "Декодировщик генерирует ответ слово за словом. У него есть два источника информации: выход из Encoder (контекст вопроса) и уже написанные им слова. <b>Маска</b> запрещает ему подсматривать будущие слова, которые он еще не написал."
+        },
+        output: {
+            title: "Выход: Выбор лучшего слова",
+            analogy: "Главный редактор (Softmax)",
+            text: "На выходе получается список вероятностей для всех слов словаря. Функция Softmax превращает сырые данные в проценты. Модель выбирает слово с самой высокой вероятностью (например, 'Париж' с 85% шансом)."
+        }
+    };
+
+    function showInfo(stageKey) {
+        const data = infoData[stageKey];
+        const panel = document.getElementById('info-display');
+        
+        // Подсветка активного этапа
+        document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+        document.getElementById(`stage-${stageKey}`).classList.add('active');
+
+        panel.innerHTML = `
+            <div class="analogy-tag">Аналогия: ${data.analogy}</div>
+            <h3>${data.title}</h3>
+            <p>${data.text}</p>
+        `;
+    }
+
+    function runSimulation() {
+        const packet = document.getElementById('packet');
+        const stages = ['token', 'embed', 'encoder', 'decoder', 'output'];
+        let currentStage = 0;
+
+        packet.style.opacity = '1';
+        packet.style.transition = 'left 1s linear';
+
+        function moveToNext() {
+            if (currentStage >= stages.length) {
+                packet.style.opacity = '0';
+                return;
+            }
+
+            const stageId = stages[currentStage];
+            const element = document.getElementById(`stage-${stageId}`);
+            
+            // Вычисляем позицию элемента относительно контейнера
+            const rect = element.getBoundingClientRect();
+            const containerRect = document.querySelector('.pipeline-container').getBoundingClientRect();
+            const leftPos = ((rect.left - containerRect.left) / containerRect.width) * 100;
+
+            packet.style.left = `${leftPos}%`;
+            showInfo(stageId);
+
+            currentStage++;
+            setTimeout(moveToNext, 1500); // Задержка между этапами
+        }
+
+        moveToNext();
+    }
+</script>
+
+</body>
+</html>

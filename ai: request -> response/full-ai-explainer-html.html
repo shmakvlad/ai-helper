@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как работает ИИ: от обучения до ответа</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #f7f7f5;
+  --bg2: #ffffff;
+  --bg3: #f0efe9;
+  --text: #2c2c2a;
+  --text2: #5f5e5a;
+  --text3: #888780;
+  --border: rgba(0,0,0,0.1);
+  --accent: #c96442;
+  --purple50: #EEEDFE; --purple600: #534AB7; --purple800: #3C3489;
+  --teal50: #E1F5EE; --teal600: #0F6E56; --teal800: #085041;
+  --coral50: #FAECE7; --coral600: #993C1D; --coral800: #712B13;
+  --amber50: #FAEEDA; --amber600: #854F0B; --amber800: #633806;
+  --pink50: #FBEAF0; --pink600: #993556; --pink800: #72243E;
+  --gray50: #F1EFE8; --gray600: #5F5E5A; --gray800: #444441;
+  --blue50: #E6F1FB; --blue600: #185FA5; --blue800: #0C447C;
+  --green50: #EAF3DE; --green600: #3B6D11; --green800: #27500A;
+  --red50: #FCEBEB; --red600: #A32D2D; --red800: #791F1F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a18;
+    --bg2: #232320;
+    --bg3: #2c2c2a;
+    --text: #e8e6dd;
+    --text2: #b4b2a9;
+    --text3: #888780;
+    --border: rgba(255,255,255,0.1);
+    --purple50: #26215C; --purple600: #AFA9EC; --purple800: #CECBF6;
+    --teal50: #04342C; --teal600: #5DCAA5; --teal800: #9FE1CB;
+    --coral50: #4A1B0C; --coral600: #F0997B; --coral800: #F5C4B3;
+    --amber50: #412402; --amber600: #FAC775; --amber800: #FAEEDA;
+    --pink50: #4B1528; --pink600: #ED93B1; --pink800: #F4C0D1;
+    --gray50: #2C2C2A; --gray600: #B4B2A9; --gray800: #D3D1C7;
+    --blue50: #042C53; --blue600: #85B7EB; --blue800: #B5D4F4;
+    --green50: #173404; --green600: #97C459; --green800: #C0DD97;
+    --red50: #501313; --red600: #F09595; --red800: #F7C1C1;
+  }
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 48px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+p { margin-bottom: 16px; }
+
+strong { font-weight: 500; }
+
+code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  background: var(--bg3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+pre {
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text2);
+}
+
+blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 12px 18px;
+  margin: 16px 0;
+  background: var(--bg2);
+  border-radius: 0 8px 8px 0;
+  color: var(--text2);
+  font-style: normal;
+}
+
+blockquote strong { color: var(--text); }
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+.subtitle {
+  color: var(--text2);
+  font-size: 15px;
+  margin-bottom: 32px;
+  font-style: italic;
+}
+
+/* SVG diagram cards */
+.diagram-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+
+.diagram-card svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Step cards for the pipeline */
+.step-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 8px 0;
+  background: var(--bg2);
+}
+.step-head { display:flex; align-items:center; }
+.step-num {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px;
+  border-radius:50%; font-size:13px; font-weight:500; margin-right:10px; flex-shrink:0;
+}
+.step-title { font-weight:500; font-size:15px; }
+.step-desc { font-size:14px; color:var(--text2); margin-top:6px; line-height:1.65; }
+.p1 .step-num { background:var(--purple50); color:var(--purple800); }
+.p2 .step-num { background:var(--teal50); color:var(--teal800); }
+.p3 .step-num { background:var(--coral50); color:var(--coral800); }
+.p4 .step-num { background:var(--amber50); color:var(--amber800); }
+.dim-arrow { text-align:center; color:var(--text3); font-size:18px; margin:2px 0; }
+.loop-badge {
+  display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px;
+  background:var(--amber50); color:var(--amber800); margin-left:8px;
+}
+
+/* Interactive attention */
+.tok-btn {
+  display:inline-block; padding:5px 14px; border-radius:6px;
+  border:1px solid var(--border); background:var(--bg3);
+  color:var(--text); font-size:13px; cursor:pointer; margin:0 3px; transition:all .15s;
+}
+.tok-btn:hover { border-color: var(--text3); }
+.tok-btn.active { border-color:var(--purple600); background:var(--purple50); color:var(--purple800); }
+.info-panel { font-size:13px; color:var(--text2); margin:8px 0 0; min-height:40px; line-height:1.5; }
+
+/* SVG text classes */
+.svg-t { font-family:'Inter',sans-serif; font-size:14px; fill:var(--text); }
+.svg-ts { font-family:'Inter',sans-serif; font-size:12px; fill:var(--text2); }
+.svg-th { font-family:'Inter',sans-serif; font-size:14px; fill:var(--text); font-weight:500; }
+
+/* Attention lines animation */
+.attn-line { transition: stroke-width .3s, opacity .3s; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Как работает ИИ: от обучения модели до генерации ответа</h1>
+<p class="subtitle">Полный разбор архитектуры трансформера для тех, кто понимает технический язык на среднем уровне.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ЧАСТЬ 1 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<h2>Часть 1. Обучение модели</h2>
+
+<h3>Что такое «параметры»?</h3>
+
+<p>Представь гигантский микшерный пульт в студии звукозаписи. На нём миллиарды ручек-крутилок. Каждая ручка — это один <strong>параметр</strong> (число с плавающей запятой, например <code>0.0037</code> или <code>−1.228</code>). Сами по себе эти числа бессмысленны. Но когда они настроены <em>в совокупности</em>, пульт превращает любой входной сигнал (твой запрос) в осмысленный выходной (ответ).</p>
+
+<p>Параметры — это <strong>веса</strong> (weights) и <strong>смещения</strong> (biases) внутри матриц, из которых состоит нейросеть. У GPT-4 их порядка триллиона, у Claude — сотни миллиардов. Они не содержат «знаний» в виде записей вроде базы данных. Вместо этого они кодируют <strong>статистические закономерности</strong> языка — как распределённая голограмма, где каждый фрагмент несёт часть всей картины.</p>
+
+<h3>Как происходит обучение?</h3>
+<p>Обучение идёт в три стадии.</p>
+
+<h4>Стадия 1 — Pre-training (предобучение)</h4>
+
+<p>Модели скармливают терабайты текста. Задача проста: по предыдущим словам предскажи следующее. Модель выдаёт прогноз, сравнивает с реальным следующим словом, вычисляет ошибку (loss), и алгоритм <strong>обратного распространения</strong> (backpropagation) чуть-чуть подкручивает каждую из миллиардов «ручек» так, чтобы в следующий раз ошибка была меньше. Это повторяется триллионы раз.</p>
+
+<blockquote>
+<strong>Аналогия:</strong> представь скульптора, который начинает с бесформенной глыбы мрамора. Каждый проход по тексту — один удар резцом. Ни один удар не создаёт скульптуру. Но после миллиардов ударов проступает форма. Параметры — это не «запомненные факты», а <strong>рельеф скульптуры</strong>, который определяет, как свет (запрос) отразится от поверхности (ответ).
+</blockquote>
+
+<!-- ===== DIAGRAM 1: Training Pipeline ===== -->
+<div class="diagram-card">
+<svg width="100%" viewBox="0 0 680 520">
+<defs>
+<marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<!-- Stage 1 container -->
+<rect x="40" y="30" width="600" height="140" rx="16" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="58" text-anchor="middle">Стадия 1: Pre-training</text>
+
+<rect x="60" y="80" width="120" height="56" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="120" y="102" text-anchor="middle" dominant-baseline="central">Терабайты</text>
+<text class="svg-ts" x="120" y="120" text-anchor="middle" dominant-baseline="central">текста из сети</text>
+
+<line x1="180" y1="108" x2="220" y2="108" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="222" y="80" width="140" height="56" rx="8" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="292" y="102" text-anchor="middle" dominant-baseline="central">Предскажи</text>
+<text class="svg-ts" x="292" y="120" text-anchor="middle" dominant-baseline="central">следующее слово</text>
+
+<line x1="362" y1="108" x2="400" y2="108" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="402" y="80" width="110" height="56" rx="8" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-th" x="457" y="102" text-anchor="middle" dominant-baseline="central">Ошибка</text>
+<text class="svg-ts" x="457" y="120" text-anchor="middle" dominant-baseline="central">loss → backprop</text>
+
+<line x1="512" y1="108" x2="535" y2="108" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="537" y="80" width="90" height="56" rx="8" fill="var(--amber50)" stroke="var(--amber600)" stroke-width="0.5"/>
+<text class="svg-th" x="582" y="102" text-anchor="middle" dominant-baseline="central">Обновить</text>
+<text class="svg-ts" x="582" y="120" text-anchor="middle" dominant-baseline="central">параметры</text>
+
+<path d="M582 136 L582 155 L120 155 L120 136" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a1)"/>
+<text class="svg-ts" x="350" y="152" text-anchor="middle">× триллионы раз</text>
+
+<!-- Stage 2 container -->
+<rect x="40" y="200" width="600" height="120" rx="16" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="228" text-anchor="middle">Стадия 2: Fine-tuning + RLHF</text>
+
+<rect x="60" y="252" width="150" height="44" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="135" y="278" text-anchor="middle" dominant-baseline="central">Пары Q → A</text>
+
+<line x1="210" y1="274" x2="255" y2="274" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="257" y="252" width="170" height="44" rx="8" fill="var(--pink50)" stroke="var(--pink600)" stroke-width="0.5"/>
+<text class="svg-th" x="342" y="278" text-anchor="middle" dominant-baseline="central">Люди оценивают</text>
+
+<line x1="427" y1="274" x2="470" y2="274" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="472" y="252" width="152" height="44" rx="8" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="548" y="278" text-anchor="middle" dominant-baseline="central">Reward model</text>
+
+<line x1="340" y1="170" x2="340" y2="198" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<!-- Stage 3 container -->
+<rect x="40" y="360" width="600" height="120" rx="16" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="388" text-anchor="middle">Стадия 3: Оценка и итерации</text>
+
+<rect x="80" y="410" width="140" height="44" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="150" y="436" text-anchor="middle" dominant-baseline="central">Бенчмарки</text>
+
+<line x1="220" y1="432" x2="265" y2="432" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="267" y="410" width="168" height="44" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="351" y="436" text-anchor="middle" dominant-baseline="central">Реальные тесты</text>
+
+<line x1="435" y1="432" x2="475" y2="432" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<rect x="477" y="410" width="148" height="44" rx="8" fill="var(--amber50)" stroke="var(--amber600)" stroke-width="0.5"/>
+<text class="svg-th" x="551" y="436" text-anchor="middle" dominant-baseline="central">Корректировка</text>
+
+<line x1="340" y1="320" x2="340" y2="358" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a1)"/>
+
+<path d="M551 454 L551 490 L40 490 L40 260 L38 260" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a1)"/>
+<text class="svg-ts" x="295" y="508" text-anchor="middle">Итерировать до приемлемого качества</text>
+</svg>
+</div>
+
+<p><strong>Ключевой инсайт:</strong> после обучения модель <strong>не хранит текст</strong> как базу данных. Она хранит миллиарды чисел, которые <em>в совокупности</em> определяют, как входной сигнал преобразуется в выходной. Это ближе к мышечной памяти пианиста, чем к записной книжке.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ЧАСТЬ 2 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<h2>Часть 2. От запроса до ответа: полный путь через трансформер</h2>
+
+<p>Теперь разберём, что происходит когда ты набираешь запрос. Возьмём конкретный пример — ты пишешь: <strong>«Почему небо голубое?»</strong></p>
+
+<h3>Шаг 1: Токенизация</h3>
+
+<p>Модель не работает с буквами и не работает с целыми словами. Она работает с <strong>токенами</strong> — фрагментами текста, которые лежат где-то между слогами и словами.</p>
+
+<blockquote>
+<strong>Аналогия:</strong> представь, что ты шифруешь текст азбукой Морзе, но вместо точек и тире у тебя <strong>словарь из ~100 000 кусочков</strong>. Частые слова («the», «is», «что») — это один токен. Редкие слова разбиваются на части: «трансформер» → «транс» + «форм» + «ер». Алгоритм токенизации (обычно BPE — Byte Pair Encoding) выбирает разбиение, которое минимизирует общее количество токенов.
+</blockquote>
+
+<p>Наш запрос «Почему небо голубое?» может превратиться примерно в 5–7 токенов, каждый из которых — просто число (ID в словаре): <code>[28451, 9823, 7712, 1055, 63]</code>.</p>
+
+<h3>Шаг 2: Эмбеддинги — слова становятся векторами</h3>
+
+<p>Каждый токен-ID превращается в <strong>вектор</strong> — длинный список чисел (обычно 4096–12288 значений). Это и есть <strong>эмбеддинг</strong>.</p>
+
+<p>Зачем? Потому что числа-ID — это просто метки, как номера в гардеробе. Они не несут смысла: ID 5000 ничем не «ближе» к ID 5001 по значению. Эмбеддинг — это <strong>координаты в пространстве смыслов</strong>. Слова с похожим значением оказываются рядом, с разным — далеко.</p>
+
+<blockquote>
+<strong>Аналогия:</strong> представь библиотеку, где книги расставлены не по алфавиту, а по <em>содержанию</em>. Книга про астрономию стоит рядом с книгой про физику звёзд, хотя их авторы начинаются на разные буквы. Эмбеддинг — это «адрес» слова в такой смысловой библиотеке, но в пространстве с тысячами измерений.
+</blockquote>
+
+<p><strong>Почему вектор?</strong> Потому что у каждого слова 4096+ координат. Каждая координата — одно «измерение смысла». Какие-то координаты могут кодировать «одушевлённость», другие — «эмоциональную окраску», третьи — «абстрактность». Ни одна координата не подписана — они возникают в процессе обучения.</p>
+
+<p><strong>Почему матрицы?</strong> Потому что у нас не один вектор, а целая последовательность — столько, сколько токенов в запросе. Если запрос — 7 токенов, а каждый эмбеддинг — вектор из 4096 чисел, то вся входная последовательность — это матрица 7×4096. Матрица — это просто таблица, где каждая строка — один токен-вектор.</p>
+
+<h3>Шаг 3: Позиционное кодирование</h3>
+
+<p>Эмбеддинги не знают <em>порядка</em> слов. Для модели «кот съел рыбу» и «рыба съела кота» пока неразличимы — оба набора токенов дали бы одинаковые эмбеддинги, только в другом порядке. Поэтому к каждому эмбеддингу <strong>прибавляется</strong> вектор позиции — уникальная «подпись», кодирующая место токена в последовательности.</p>
+
+<!-- ===== DIAGRAM 2: Tokenization → Embeddings ===== -->
+<div class="diagram-card">
+<svg width="100%" viewBox="0 0 680 520">
+<defs><marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<text class="svg-th" x="340" y="30" text-anchor="middle">Вход: «Почему небо голубое?»</text>
+<text class="svg-ts" x="40" y="68">Шаг 1: Токенизация</text>
+
+<rect x="60" y="80" width="90" height="40" rx="6" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="105" y="104" text-anchor="middle" dominant-baseline="central">Почему</text>
+<rect x="162" y="80" width="68" height="40" rx="6" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="196" y="104" text-anchor="middle" dominant-baseline="central">небо</text>
+<rect x="242" y="80" width="68" height="40" rx="6" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="276" y="104" text-anchor="middle" dominant-baseline="central">голуб</text>
+<rect x="322" y="80" width="52" height="40" rx="6" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="348" y="104" text-anchor="middle" dominant-baseline="central">ое</text>
+<rect x="386" y="80" width="36" height="40" rx="6" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="404" y="104" text-anchor="middle" dominant-baseline="central">?</text>
+
+<text class="svg-ts" x="105" y="140" text-anchor="middle" fill="var(--amber800)">ID: 28451</text>
+<text class="svg-ts" x="196" y="140" text-anchor="middle" fill="var(--amber800)">ID: 9823</text>
+<text class="svg-ts" x="276" y="140" text-anchor="middle" fill="var(--amber800)">ID: 7712</text>
+<text class="svg-ts" x="348" y="140" text-anchor="middle" fill="var(--amber800)">ID: 1055</text>
+<text class="svg-ts" x="404" y="140" text-anchor="middle" fill="var(--amber800)">ID: 63</text>
+
+<line x1="250" y1="155" x2="250" y2="175" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<text class="svg-ts" x="40" y="198">Шаг 2: Таблица эмбеддингов (100K строк × 4096 столбцов)</text>
+
+<rect x="55" y="215" width="110" height="36" rx="4" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="110" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">[0.23, −1.1, ...]</text>
+<rect x="175" y="215" width="90" height="36" rx="4" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="220" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">[0.87, 0.3, ...]</text>
+<rect x="275" y="215" width="90" height="36" rx="4" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="320" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">[−0.5, 1.7, ...]</text>
+<rect x="375" y="215" width="90" height="36" rx="4" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="420" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">[0.12, −0.8, ...]</text>
+<rect x="475" y="215" width="90" height="36" rx="4" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="520" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">[−1.3, 0.4, ...]</text>
+
+<text class="svg-ts" x="610" y="237">← каждый</text>
+<text class="svg-ts" x="610" y="252">4096 чисел</text>
+
+<line x1="310" y1="258" x2="310" y2="282" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<text class="svg-ts" x="40" y="300">Шаг 3: + Позиционное кодирование</text>
+
+<rect x="55" y="315" width="110" height="32" rx="4" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="110" y="335" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">pos₁</text>
+<rect x="175" y="315" width="90" height="32" rx="4" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="220" y="335" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">pos₂</text>
+<rect x="275" y="315" width="90" height="32" rx="4" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="320" y="335" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">pos₃</text>
+<rect x="375" y="315" width="90" height="32" rx="4" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="420" y="335" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">pos₄</text>
+<rect x="475" y="315" width="90" height="32" rx="4" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="520" y="335" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">pos₅</text>
+
+<text class="svg-th" x="110" y="365" text-anchor="middle">+</text>
+<text class="svg-th" x="220" y="365" text-anchor="middle">+</text>
+<text class="svg-th" x="320" y="365" text-anchor="middle">+</text>
+<text class="svg-th" x="420" y="365" text-anchor="middle">+</text>
+<text class="svg-th" x="520" y="365" text-anchor="middle">+</text>
+
+<line x1="310" y1="370" x2="310" y2="395" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<text class="svg-ts" x="40" y="415">Результат: матрица 5 × 4096 — вход в трансформер</text>
+
+<rect x="55" y="430" width="510" height="60" rx="8" fill="var(--amber50)" stroke="var(--amber600)" stroke-width="0.5"/>
+<line x1="55" y1="442" x2="565" y2="442" stroke="var(--amber600)" stroke-width="0.3" opacity="0.3"/>
+<line x1="55" y1="454" x2="565" y2="454" stroke="var(--amber600)" stroke-width="0.3" opacity="0.3"/>
+<line x1="55" y1="466" x2="565" y2="466" stroke="var(--amber600)" stroke-width="0.3" opacity="0.3"/>
+<line x1="55" y1="478" x2="565" y2="478" stroke="var(--amber600)" stroke-width="0.3" opacity="0.3"/>
+
+<text class="svg-ts" x="30" y="439" text-anchor="end">t₁</text>
+<text class="svg-ts" x="30" y="451" text-anchor="end">t₂</text>
+<text class="svg-ts" x="30" y="463" text-anchor="end">t₃</text>
+<text class="svg-ts" x="30" y="475" text-anchor="end">t₄</text>
+<text class="svg-ts" x="30" y="487" text-anchor="end">t₅</text>
+
+<text class="svg-ts" x="310" y="510" text-anchor="middle">← 4096 столбцов →</text>
+</svg>
+</div>
+
+<p>Теперь эта матрица 5×4096 — готовый вход для трансформера. Каждая строка — один токен, превращённый в вектор, обогащённый информацией о позиции.</p>
+
+<h3>Шаг 4: Трансформер — слой за слоем</h3>
+
+<p>Здесь начинается магия. Трансформер — это <strong>стопка одинаковых слоёв</strong> (в современных моделях 80–120 слоёв). Каждый слой делает две вещи:</p>
+
+<p>1. <strong>Self-Attention</strong> — токены «разговаривают» друг с другом<br>
+2. <strong>Feed-Forward Network (FFN)</strong> — каждый токен «думает» в одиночку</p>
+
+<p>Между ними — нормализация (LayerNorm) и остаточные связи (residual connections).</p>
+
+<h4>Механизм внимания (Self-Attention) — ядро трансформера</h4>
+
+<p>Это самая важная и самая непонятная часть. Разберём её тщательно.</p>
+
+<blockquote>
+<strong>Аналогия «вечеринка»:</strong> Представь вечеринку, где каждый гость — это токен. Механизм внимания — это то, как каждый гость решает, к кому прислушиваться.<br><br>
+Каждый гость создаёт три визитки:<br>
+• <strong>Query (Q)</strong> — «Что мне интересно?» (вопрос, который задаёт этот токен)<br>
+• <strong>Key (K)</strong> — «Чем я могу быть полезен?» (что этот токен может предложить другим)<br>
+• <strong>Value (V)</strong> — «Вот мой вклад» (фактическая информация, которую токен передаёт)
+</blockquote>
+
+<p>Каждый гость <strong>сравнивает свой Query с Key каждого другого гостя</strong>. Чем лучше совпадение — тем внимательнее он слушает этого гостя. Потом он <strong>взвешенно суммирует Value всех остальных</strong> — пропорционально тому, насколько внимательно он их слушал.</p>
+
+<p><strong>Математически:</strong></p>
+<p>1. Из вектора каждого токена создаются Q, K, V путём умножения на три разные матрицы весов (это те самые параметры!)<br>
+2. Для каждой пары токенов вычисляется «оценка внимания» = Q₁ · K₂ᵀ (скалярное произведение)<br>
+3. Оценки нормализуются через softmax → получаются <strong>веса внимания</strong> (сумма = 1)<br>
+4. Новый вектор токена = взвешенная сумма всех V</p>
+
+<!-- ===== DIAGRAM 3: Self-Attention Interactive ===== -->
+<div class="diagram-card">
+<div style="margin-bottom:8px">
+<span style="font-size:13px;color:var(--text2)">Кликни на токен, чтобы увидеть его внимание:</span>
+<div style="margin:6px 0" id="btns"></div>
+</div>
+
+<svg id="attn-svg" width="100%" viewBox="0 0 680 400">
+<defs><marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<text class="svg-ts" x="30" y="60" text-anchor="end">Query</text>
+<text class="svg-ts" x="30" y="200" text-anchor="end">Key</text>
+<text class="svg-ts" x="30" y="340" text-anchor="end">Value</text>
+
+<!-- Почему -->
+<rect x="52" y="40" width="100" height="36" rx="6" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="102" y="62" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">Q: Почему</text>
+<rect x="52" y="180" width="100" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="102" y="202" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K: Почему</text>
+<rect x="52" y="320" width="100" height="36" rx="6" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-ts" x="102" y="342" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">V: Почему</text>
+
+<!-- небо -->
+<rect x="170" y="40" width="100" height="36" rx="6" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="220" y="62" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">Q: небо</text>
+<rect x="170" y="180" width="100" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="220" y="202" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K: небо</text>
+<rect x="170" y="320" width="100" height="36" rx="6" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-ts" x="220" y="342" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">V: небо</text>
+
+<!-- голуб -->
+<rect x="288" y="40" width="100" height="36" rx="6" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="338" y="62" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">Q: голуб</text>
+<rect x="288" y="180" width="100" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="338" y="202" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K: голуб</text>
+<rect x="288" y="320" width="100" height="36" rx="6" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-ts" x="338" y="342" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">V: голуб</text>
+
+<!-- ое -->
+<rect x="406" y="40" width="76" height="36" rx="6" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="444" y="62" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">Q: ое</text>
+<rect x="406" y="180" width="76" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="444" y="202" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K: ое</text>
+<rect x="406" y="320" width="76" height="36" rx="6" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-ts" x="444" y="342" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">V: ое</text>
+
+<!-- ? -->
+<rect x="500" y="40" width="76" height="36" rx="6" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-ts" x="538" y="62" text-anchor="middle" dominant-baseline="central" fill="var(--purple800)">Q: ?</text>
+<rect x="500" y="180" width="76" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-ts" x="538" y="202" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K: ?</text>
+<rect x="500" y="320" width="76" height="36" rx="6" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-ts" x="538" y="342" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">V: ?</text>
+
+<g id="attn-lines"></g>
+
+<text class="svg-ts" x="620" y="130" text-anchor="middle">Q · Kᵀ</text>
+<text class="svg-ts" x="620" y="145" text-anchor="middle">= веса</text>
+<text class="svg-ts" x="620" y="270" text-anchor="middle">взвеш.</text>
+<text class="svg-ts" x="620" y="285" text-anchor="middle">сумма V</text>
+</svg>
+
+<div class="info-panel" id="info">Кликни на токен выше, чтобы увидеть, к кому он «прислушивается».</div>
+</div>
+
+<script>
+(function(){
+var tokens=['Почему','небо','голуб','ое','?'];
+var cx=[102,220,338,444,538];
+var weights=[
+  [0.10,0.35,0.30,0.15,0.10],
+  [0.15,0.20,0.40,0.15,0.10],
+  [0.05,0.45,0.25,0.20,0.05],
+  [0.05,0.10,0.55,0.25,0.05],
+  [0.30,0.25,0.20,0.10,0.15]
+];
+var btnsEl=document.getElementById('btns');
+tokens.forEach(function(t,i){
+  var b=document.createElement('span');
+  b.className='tok-btn';b.textContent=t;
+  b.onclick=function(){selectTok(i)};
+  btnsEl.appendChild(b);
+});
+function selectTok(idx){
+  var bs=btnsEl.children;
+  for(var i=0;i<bs.length;i++)bs[i].className='tok-btn'+(i===idx?' active':'');
+  drawLines(idx);
+  var desc='Токен «'+tokens[idx]+'» распределяет внимание: ';
+  var parts=[];
+  for(var j=0;j<tokens.length;j++)parts.push(tokens[j]+' → '+(weights[idx][j]*100).toFixed(0)+'%');
+  document.getElementById('info').textContent=desc+parts.join(', ');
+}
+function drawLines(idx){
+  var g=document.getElementById('attn-lines');g.innerHTML='';
+  var ns='http://www.w3.org/2000/svg';var w=weights[idx];
+  for(var j=0;j<5;j++){
+    var l=document.createElementNS(ns,'line');
+    l.setAttribute('x1',cx[idx]);l.setAttribute('y1',76);
+    l.setAttribute('x2',cx[j]);l.setAttribute('y2',180);
+    l.setAttribute('stroke','#EF9F27');
+    l.setAttribute('stroke-width',(w[j]*8+0.5).toFixed(1));
+    l.setAttribute('opacity',(w[j]*1.5+0.15).toFixed(2));
+    l.setAttribute('stroke-linecap','round');g.appendChild(l);
+    var l2=document.createElementNS(ns,'line');
+    l2.setAttribute('x1',cx[j]);l2.setAttribute('y1',216);
+    l2.setAttribute('x2',cx[j]);l2.setAttribute('y2',320);
+    l2.setAttribute('stroke','#EF9F27');
+    l2.setAttribute('stroke-width',(w[j]*6+0.3).toFixed(1));
+    l2.setAttribute('opacity',(w[j]*1.2+0.1).toFixed(2));
+    l2.setAttribute('stroke-linecap','round');g.appendChild(l2);
+  }
+}
+})();
+</script>
+
+<p>Обрати внимание: когда ты кликаешь на токен «голуб», он сильнее всего «прислушивается» к «небо» — потому что контекст «небо голубое» создаёт сильную связь между этими словами. Это не запрограммировано вручную — модель <em>сама</em> научилась этому из данных.</p>
+
+<h4>Multi-Head Attention — почему «голов» много?</h4>
+
+<p>На вечеринке каждый гость создаёт не одну тройку визиток (Q, K, V), а <strong>32, 64 или даже 128 комплектов</strong> — по числу «голов внимания». Каждая голова специализируется на своём типе связей:</p>
+
+<p>• Одна голова может следить за <strong>синтаксисом</strong> (подлежащее → сказуемое)<br>
+• Другая — за <strong>семантической близостью</strong> (небо ↔ голубое)<br>
+• Третья — за <strong>дальними ссылками</strong> (местоимение → существительное на 20 слов раньше)</p>
+
+<p>Потом результаты всех голов склеиваются (конкатенация) и снова умножаются на матрицу весов, чтобы «сжать» обратно до исходного размера.</p>
+
+<h4>Feed-Forward Network (FFN) — «тихое размышление»</h4>
+
+<p>После внимания каждый токен (уже обогащённый информацией от других) проходит через <strong>простую двухслойную нейросеть</strong> — она одинакова для всех токенов, но применяется к каждому независимо. Если self-attention — это «разговор с другими», то FFN — это «внутренний монолог», где токен обрабатывает собранную информацию.</p>
+
+<p>FFN часто описывают как <strong>хранилище знаний</strong> модели: именно здесь, в весах этих слоёв, закодированы факты вроде «небо голубое из-за рэлеевского рассеяния».</p>
+
+<h4>Residual Connections — страховка от забывания</h4>
+
+<p>Результат каждого подслоя (attention или FFN) <strong>прибавляется</strong> к его входу. Это значит, что если слой ничего полезного не добавил, информация всё равно проходит. Это как лифт, который идёт с первого по 96-й этаж без потери пассажиров — каждый этаж может что-то добавить, но ничего не забирает.</p>
+
+<!-- ===== DIAGRAM 4: Single Transformer Layer ===== -->
+<div class="diagram-card">
+<svg width="100%" viewBox="0 0 680 600">
+<defs><marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<rect x="120" y="20" width="440" height="540" rx="16" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="48" text-anchor="middle">Один слой трансформера (×80–120 слоёв)</text>
+
+<text class="svg-ts" x="340" y="82" text-anchor="middle">Вход: матрица 5×4096</text>
+<line x1="340" y1="88" x2="340" y2="108" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+<rect x="240" y="110" width="200" height="40" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="134" text-anchor="middle" dominant-baseline="central">Layer Norm</text>
+
+<line x1="340" y1="150" x2="340" y2="175" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+<rect x="180" y="177" width="320" height="110" rx="12" fill="var(--purple50)" stroke="var(--purple600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="200" text-anchor="middle" fill="var(--purple800)">Multi-Head Self-Attention</text>
+
+<rect x="200" y="215" width="70" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="235" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">Q</text>
+<rect x="285" y="215" width="70" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="320" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">K</text>
+<rect x="370" y="215" width="70" height="36" rx="6" fill="var(--teal50)" stroke="var(--teal600)" stroke-width="0.5"/>
+<text class="svg-th" x="405" y="237" text-anchor="middle" dominant-baseline="central" fill="var(--teal800)">V</text>
+
+<text class="svg-ts" x="340" y="272" text-anchor="middle" fill="var(--purple800)">softmax(Q·Kᵀ / √d) · V</text>
+
+<path d="M165 130 L165 310 L238 310" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a4)"/>
+<text class="svg-ts" x="150" y="220" text-anchor="end">+</text>
+
+<rect x="240" y="295" width="48" height="30" rx="6" fill="var(--amber50)" stroke="var(--amber600)" stroke-width="0.5"/>
+<text class="svg-th" x="264" y="314" text-anchor="middle" dominant-baseline="central" fill="var(--amber800)">⊕</text>
+<line x1="340" y1="287" x2="264" y2="295" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+<line x1="264" y1="325" x2="264" y2="335" stroke="var(--text3)" stroke-width="0.5"/>
+<line x1="264" y1="335" x2="340" y2="335" stroke="var(--text3)" stroke-width="0.5"/>
+<line x1="340" y1="335" x2="340" y2="350" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+<rect x="240" y="352" width="200" height="40" rx="8" fill="var(--gray50)" stroke="var(--gray600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="376" text-anchor="middle" dominant-baseline="central">Layer Norm</text>
+
+<line x1="340" y1="392" x2="340" y2="412" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+<rect x="220" y="414" width="240" height="56" rx="10" fill="var(--coral50)" stroke="var(--coral600)" stroke-width="0.5"/>
+<text class="svg-th" x="340" y="436" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">Feed-Forward</text>
+<text class="svg-ts" x="340" y="454" text-anchor="middle" dominant-baseline="central" fill="var(--coral800)">4096 → 16384 → 4096</text>
+
+<path d="M515 376 L515 500 L392 500" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a4)"/>
+<text class="svg-ts" x="530" y="440" text-anchor="start">+</text>
+
+<rect x="368" y="487" width="48" height="30" rx="6" fill="var(--amber50)" stroke="var(--amber600)" stroke-width="0.5"/>
+<text class="svg-th" x="392" y="506" text-anchor="middle" dominant-baseline="central" fill="var(--amber800)">⊕</text>
+<line x1="340" y1="470" x2="392" y2="487" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+<line x1="392" y1="517" x2="392" y2="530" stroke="var(--text3)" stroke-width="0.5"/>
+<line x1="392" y1="530" x2="340" y2="530" stroke="var(--text3)" stroke-width="0.5"/>
+<line x1="340" y1="530" x2="340" y2="545" stroke="var(--text3)" stroke-width="1.5" marker-end="url(#a4)"/>
+<text class="svg-ts" x="340" y="565" text-anchor="middle">Выход → вход следующего слоя</text>
+</svg>
+</div>
+
+<p>Каждый из 80–120 слоёв повторяет эту структуру. Ранние слои обычно улавливают простые паттерны (грамматика, согласование), средние — семантику (смысловые связи), а глубокие — абстрактное мышление (логика, рассуждения).</p>
+
+<h3>Шаг 5: Генерация ответа — от вектора к слову</h3>
+
+<p>После прохождения через все слои у нас есть обновлённая матрица. Для генерации следующего слова модель берёт вектор <strong>последнего токена</strong> (он аккумулировал информацию от всех остальных через attention) и умножает его на ту самую матрицу эмбеддингов, но в обратную сторону: из вектора 4096 → вектор 100 000 (по числу токенов в словаре).</p>
+
+<p>Каждое число в этом векторе — <strong>оценка (logit)</strong> того, насколько вероятен каждый токен как следующий. Через softmax эти оценки превращаются в вероятности: «Потому» — 12%, «Из-за» — 8%, «Небо» — 3% и т.д. Модель выбирает один токен (с элементом случайности — это «температура»).</p>
+
+<p>И <strong>этот процесс повторяется</strong>: выбранный токен добавляется ко входу, вся последовательность снова проходит через все слои, генерируется следующий токен — и так пока не появится токен конца последовательности.</p>
+
+<!-- ===== DIAGRAM 5: Full Pipeline Steps ===== -->
+<div class="diagram-card" style="padding:20px 18px">
+
+<div class="step-card p1">
+<div class="step-head"><span class="step-num">1</span><span class="step-title">Токенизация</span></div>
+<div class="step-desc">«Почему небо голубое?» → [28451, 9823, 7712, 1055, 63] — 5 целых чисел. Алгоритм BPE разбивает текст на кусочки из словаря ~100K записей.</div>
+</div>
+
+<div class="dim-arrow">↓</div>
+
+<div class="step-card p1">
+<div class="step-head"><span class="step-num">2</span><span class="step-title">Эмбеддинги + позиции</span></div>
+<div class="step-desc">Каждый ID → вектор из 4096 чисел (координаты в пространстве смыслов). Прибавляется вектор позиции. Результат: матрица 5×4096.</div>
+</div>
+
+<div class="dim-arrow">↓</div>
+
+<div class="step-card p2">
+<div class="step-head"><span class="step-num">3</span><span class="step-title">Трансформер: 80–120 слоёв</span><span class="loop-badge">×N слоёв</span></div>
+<div class="step-desc">Каждый слой: Self-Attention (токены обмениваются информацией через Q·Kᵀ·V) → FFN (каждый токен «думает» индивидуально, 4096→16384→4096). Residual connections сохраняют информацию через все слои. Ранние слои: грамматика. Средние: семантика. Глубокие: рассуждения.</div>
+</div>
+
+<div class="dim-arrow">↓</div>
+
+<div class="step-card p3">
+<div class="step-head"><span class="step-num">4</span><span class="step-title">Проекция в словарь</span></div>
+<div class="step-desc">Вектор последнего токена (4096 чисел) умножается на матрицу эмбеддингов → вектор из 100 000 оценок. Каждая оценка — вероятность конкретного токена быть следующим.</div>
+</div>
+
+<div class="dim-arrow">↓</div>
+
+<div class="step-card p3">
+<div class="step-head"><span class="step-num">5</span><span class="step-title">Сэмплирование</span></div>
+<div class="step-desc">Softmax превращает оценки в вероятности. «Потому» — 12%, «Из-за» — 8%, «Небо» — 3%... Модель выбирает один токен с учётом «температуры» (насколько рискованно выбирать).</div>
+</div>
+
+<div class="dim-arrow">↓</div>
+
+<div class="step-card p4">
+<div class="step-head"><span class="step-num">6</span><span class="step-title">Автогрессивный цикл</span><span class="loop-badge">↻ повтор</span></div>
+<div class="step-desc">Выбранный токен «Потому» добавляется к входу. Теперь вход — 6 токенов. Вся цепочка шагов 2–5 повторяется заново. Следующий токен: «что». Потом «небо», «рассеивает»... И так до токена [END] или лимита длины.</div>
+</div>
+
+</div>
+
+<h3>Почему вектора и матрицы повсюду?</h3>
+
+<p>Вся работа трансформера — это <strong>последовательные умножения матриц</strong>. Почему именно матрицы?</p>
+
+<p>Потому что <strong>матричное умножение — это универсальный язык преобразований</strong>. Когда ты умножаешь вектор слова на матрицу весов, ты <em>вращаешь и растягиваешь</em> его в пространстве смыслов. Каждый слой трансформера — это серия таких вращений и растяжений, которые постепенно превращают «сырые» координаты слова в координаты, кодирующие ответ.</p>
+
+<blockquote>
+<strong>Аналогия:</strong> представь, что каждый токен — это точка на карте. Матричное умножение — это как перерисовка карты: страны меняют форму, некоторые сближаются, некоторые отдаляются. Через 96 таких перерисовок точка, которая начиналась как «Почему», оказывается в той области пространства, которая кодирует «Потому что рэлеевское рассеяние...».
+</blockquote>
+
+<hr>
+
+<p style="color:var(--text3);font-size:14px;text-align:center;margin-top:40px">Сгенерировано Claude (Anthropic) • Архитектура трансформера</p>
+
+</div>
+</body>
+</html>
