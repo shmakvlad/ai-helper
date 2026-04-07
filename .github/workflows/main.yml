@@ -1,0 +1,61 @@
+name: testRigor E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  testrigor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start testRigor run
+        run: |
+          echo "Starting testRigor tests..."
+          curl -X POST \
+            -H "Content-type: application/json" \
+            -H "auth-token: ${{ secrets.API_KEY }}" \
+            --data '{ "forceCancelPreviousTesting": true }' \
+            https://api.testrigor.com/api/v1/apps/${{ secrets.APP }}/retest
+      - name: Wait for testRigor results
+        run: |
+          echo "Waiting for testRigor to finish..."
+          while true
+          do
+            response=$(curl -i -s -X GET \
+              -H "Content-type: application/json" \
+              -H "Accept: application/json" \
+              -H "auth-token: ${{ secrets.API_KEY }}" \
+              https://api.testrigor.com/api/v1/apps/${{ secrets.APP }}/status)
+            code=$(echo "$response" | grep HTTP | awk '{print $2}')
+            body=$(echo "$response" | sed -n '/{/,/}/p')
+            echo "HTTP status: $code"
+            echo "Response body: $body"
+            case $code in
+              200)
+                echo "Tests finished successfully"
+                exit 0
+                ;;
+              227|228)
+                echo "Tests are still running..."
+                ;;
+              229)
+                echo "Tests were canceled"
+                exit 1
+                ;;
+              230)
+                echo "Tests finished but failed"
+                exit 1
+                ;;
+              4*|5*)
+                echo "API error"
+                exit 1
+                ;;
+              *)
+                echo "Unknown status"
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
